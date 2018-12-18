@@ -14,6 +14,8 @@
  */
 package org.candlepin.resource;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.candlepin.common.exceptions.ForbiddenException;
 import org.candlepin.model.Consumer;
 import org.candlepin.model.ConsumerCurator;
@@ -35,8 +37,8 @@ import org.candlepin.test.TestUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.inject.Inject;
 
@@ -59,7 +61,7 @@ public class ConsumerResourceEntitlementRulesTest extends DatabaseTestFixture {
 
     private Owner owner;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         standardSystemType = consumerTypeCurator.create(new ConsumerType("standard-system"));
         owner = ownerCurator.create(new Owner("test-owner"));
@@ -75,7 +77,7 @@ public class ConsumerResourceEntitlementRulesTest extends DatabaseTestFixture {
         poolCurator.create(pool);
     }
 
-    @Test(expected = ForbiddenException.class)
+    @Test
     public void testMaxMembership() {
         // 10 entitlements available, lets try to entitle 11 consumers.
         for (int i = 0; i < pool.getQuantity(); i++) {
@@ -88,13 +90,17 @@ public class ConsumerResourceEntitlementRulesTest extends DatabaseTestFixture {
         // Now for the 11th:
         Consumer c = TestUtil.createConsumer(standardSystemType, owner);
         consumerCurator.create(c);
-        consumerResource.bind(c.getUuid(), pool.getId(), null, 1, null, null, false, null, null);
+        assertThrows(ForbiddenException.class, () ->
+            consumerResource.bind(c.getUuid(), pool.getId(), null, 1, null, null, false, null, null)
+        );
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void testEntitlementsHaveExpired() {
         dateSource.currentDate(TestDateUtil.date(2030, 1, 13));
-        consumerResource.bind(consumer.getUuid(), pool.getId(), null, null, null, null, false, null, null);
+        assertThrows(RuntimeException.class, () -> consumerResource.bind(consumer.getUuid(), pool.getId(),
+            null, null, null, null, false, null, null)
+        );
     }
 
     @Override

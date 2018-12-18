@@ -16,7 +16,6 @@ package org.candlepin.controller;
 
 import static org.junit.Assert.*;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
-import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import org.candlepin.audit.Event;

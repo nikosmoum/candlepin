@@ -16,7 +16,6 @@ package org.candlepin.service.impl;
 
 import static org.junit.Assert.*;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
-import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import org.candlepin.common.config.Configuration;

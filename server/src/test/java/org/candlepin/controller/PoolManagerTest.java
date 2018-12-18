@@ -30,9 +30,9 @@ import org.candlepin.bind.BindContext;
 import org.candlepin.bind.BindContextFactory;
 import org.candlepin.bind.CheckBonusPoolQuantitiesOp;
 import org.candlepin.bind.ComplianceOp;
-import org.candlepin.bind.PoolOperationCallback;
 import org.candlepin.bind.HandleCertificatesOp;
 import org.candlepin.bind.HandleEntitlementsOp;
+import org.candlepin.bind.PoolOperationCallback;
 import org.candlepin.bind.PostBindBonusPoolsOp;
 import org.candlepin.bind.PreEntitlementRulesCheckOp;
 import org.candlepin.bind.PreEntitlementRulesCheckOpFactory;
@@ -92,22 +92,23 @@ import org.candlepin.test.MockResultIterator;
 import org.candlepin.test.TestUtil;
 
 import org.hamcrest.core.IsCollectionContaining;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnap.commons.i18n.I18n;
 import org.xnap.commons.i18n.I18nFactory;
-
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -122,11 +123,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * PoolManagerTest
  */
-@RunWith(JUnitParamsRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class PoolManagerTest {
     private static Logger log = LoggerFactory.getLogger(PoolManagerTest.class);
 
@@ -173,10 +176,8 @@ public class PoolManagerTest {
 
     protected static Map<String, List<Pool>> subToPools;
 
-    @Before
+    @BeforeEach
     public void init() throws Exception {
-        MockitoAnnotations.initMocks(this);
-
         i18n = I18nFactory.getI18n(getClass(), Locale.US, I18nFactory.FALLBACK);
 
         owner = TestUtil.createOwner("key", "displayname");
@@ -1105,7 +1106,7 @@ public class PoolManagerTest {
         manager.revokeEntitlements(entsToDelete);
         entsToDelete.add(e3);
         verify(entitlementCurator).batchDelete(eq(entsToDelete));
-        verify(mockPoolCurator).batchDelete(eq(poolsWithSourceAsSet), anySetOf(String.class));
+        verify(mockPoolCurator).batchDelete(eq(poolsWithSourceAsSet), nullable(Collection.class));
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -1124,9 +1125,9 @@ public class PoolManagerTest {
 
         when(page.getPageData()).thenReturn(pools);
         when(mockPoolCurator.listAvailableEntitlementPools(any(Consumer.class),
-            any(String.class), any(String.class), any(String.class), eq(now),
-            any(PoolFilterBuilder.class), any(PageRequest.class), anyBoolean(), anyBoolean(), anyBoolean(),
-            any(Date.class)))
+            any(String.class), nullable(String.class), nullable(String.class), eq(now),
+            any(PoolFilterBuilder.class), nullable(PageRequest.class), eq(true), eq(false),
+                eq(false), nullable(Date.class)))
             .thenReturn(page);
 
         CandlepinQuery mockQuery = mock(CandlepinQuery.class);
@@ -1673,7 +1674,7 @@ public class PoolManagerTest {
         assertEquals(newPools.get(0).getSourceSubscription().getSubscriptionSubKey(), "master");
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void createPoolsForPoolBonusExist() {
         Owner owner = this.getOwner();
         PoolRules pRules = new PoolRules(manager, mockConfig, entitlementCurator,
@@ -1910,6 +1911,9 @@ public class PoolManagerTest {
         when(mockPoolCurator.lockAndLoad(eq(derivedPool))).thenReturn(derivedPool);
         pool.setId("masterpool");
 
+        when(enforcerMock.postEntitlement(eq(manager), eq(consumer), nullable(Owner.class), anyMap(),
+            anyList(),
+            eq(true), anyMap())).thenReturn(mock(PoolOperationCallback.class));
         manager.adjustEntitlementQuantity(consumer, masterEnt, 3);
 
         Class<List<Entitlement>> listClass = (Class<List<Entitlement>>) (Class) ArrayList.class;
@@ -1984,6 +1988,9 @@ public class PoolManagerTest {
         when(mockPoolCurator.lockAndLoad(eq(derivedPool3))).thenReturn(derivedPool3);
         pool.setId("masterpool");
 
+        when(enforcerMock.postEntitlement(eq(manager), eq(consumer), nullable(Owner.class), anyMap(),
+            anyList(),
+            eq(true), anyMap())).thenReturn(mock(PoolOperationCallback.class));
         manager.adjustEntitlementQuantity(consumer, masterEnt, 3);
 
         Class<List<Entitlement>> listClass = (Class<List<Entitlement>>) (Class) ArrayList.class;
@@ -2076,10 +2083,10 @@ public class PoolManagerTest {
 
     // TODO:
     // Refactor these tests when isManaged is refactored to not be reliant upon the config
-    public Object[][] getParametersForIsManagedTests() {
+    public static Stream<Object[]> getParametersForIsManagedTests() {
         SourceSubscription srcSub = new SourceSubscription("test_sub_id", "test_sub_key");
 
-        return new Object[][] {
+        return Stream.of(
             // Standalone tests
             new Object[] { PoolType.NORMAL, null, null, false, false },
             new Object[] { PoolType.ENTITLEMENT_DERIVED, null, null, false, false },
@@ -2136,8 +2143,8 @@ public class PoolManagerTest {
             new Object[] { PoolType.STACK_DERIVED, srcSub, "upstream_pool_id", true, false },
             new Object[] { PoolType.BONUS, srcSub, "upstream_pool_id", true, true },
             new Object[] { PoolType.UNMAPPED_GUEST, srcSub, "upstream_pool_id", true, true },
-            new Object[] { PoolType.DEVELOPMENT, srcSub, "upstream_pool_id", true, true },
-        };
+            new Object[] { PoolType.DEVELOPMENT, srcSub, "upstream_pool_id", true, true }
+        );
     }
 
     @Test
@@ -2145,8 +2152,8 @@ public class PoolManagerTest {
         assertFalse(manager.isManaged(null));
     }
 
-    @Test
-    @Parameters(method = "getParametersForIsManagedTests")
+    @ParameterizedTest
+    @MethodSource("getParametersForIsManagedTests")
     public void testIsManaged(PoolType type, SourceSubscription srcSub, String upstreamPoolId, boolean hosted,
         boolean expected) {
 

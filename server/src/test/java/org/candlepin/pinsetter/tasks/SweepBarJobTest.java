@@ -21,7 +21,6 @@ import org.candlepin.pinsetter.core.PinsetterKernel;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.quartz.JobExecutionContext;
@@ -55,6 +54,6 @@ public class SweepBarJobTest extends BaseJobTest {
     @Test
     public void testSweepBarJob() throws Exception {
         sweepBarJob.execute(ctx);
-        verify(j, atLeastOnce()).cancelOrphanedJobs(Matchers.anyListOf(String.class));
+        verify(j, atLeastOnce()).cancelOrphanedJobs(anyListOf(String.class));
     }
 }

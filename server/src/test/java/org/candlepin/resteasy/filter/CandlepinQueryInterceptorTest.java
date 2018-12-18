@@ -14,9 +14,7 @@
  */
 package org.candlepin.resteasy.filter;
 
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import org.candlepin.common.paging.PageRequest;
@@ -35,25 +33,23 @@ import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Order;
 import org.jboss.resteasy.core.ServerResponse;
 import org.jboss.resteasy.spi.ResteasyProviderFactory;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.stream.Stream;
 
 import javax.persistence.EntityManager;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.StreamingOutput;
 
 
-
-@RunWith(JUnitParamsRunner.class)
 public class CandlepinQueryInterceptorTest extends DatabaseTestFixture {
     private static Logger log = LoggerFactory.getLogger(CandlepinQueryInterceptorTest.class);
 
@@ -64,6 +60,7 @@ public class CandlepinQueryInterceptorTest extends DatabaseTestFixture {
     protected OutputStream mockOutputStream;
     protected Provider<EntityManager> emProvider;
 
+    @BeforeEach
     @Override
     public void init() throws Exception {
         super.init();
@@ -134,8 +131,8 @@ public class CandlepinQueryInterceptorTest extends DatabaseTestFixture {
         verify(this.mockJsonGenerator, times(1)).writeEndArray();
     }
 
-    private Object[][] paramsForPaginatedContentTest() {
-        return new Object[][] {
+    private static Stream<Object[]> paramsForPaginatedContentTest() {
+        return Stream.of(
             new Object[] { 1, 5, "key", PageRequest.Order.ASCENDING },
             new Object[] { 1, 5, "key", PageRequest.Order.DESCENDING },
             new Object[] { 1, 1, "key", PageRequest.Order.ASCENDING },
@@ -143,12 +140,12 @@ public class CandlepinQueryInterceptorTest extends DatabaseTestFixture {
             new Object[] { 2, 2, "key", PageRequest.Order.ASCENDING },
             new Object[] { 2, 2, "key", PageRequest.Order.DESCENDING },
             new Object[] { 5, 10, "key", PageRequest.Order.ASCENDING },
-            new Object[] { 5, 10, "key", PageRequest.Order.DESCENDING },
-        };
+            new Object[] { 5, 10, "key", PageRequest.Order.DESCENDING }
+        );
     }
 
-    @Test
-    @Parameters(method = "paramsForPaginatedContentTest")
+    @ParameterizedTest
+    @MethodSource("paramsForPaginatedContentTest")
     public void testWritePaginatedCandlepinQueryContents(int page, int perPage, String sortBy,
         PageRequest.Order order) throws IOException {
 

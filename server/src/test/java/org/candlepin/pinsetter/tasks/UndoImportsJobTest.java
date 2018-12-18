@@ -14,8 +14,7 @@
  */
 package org.candlepin.pinsetter.tasks;
 
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import org.candlepin.auth.Principal;
@@ -24,9 +23,9 @@ import org.candlepin.controller.CandlepinPoolManager;
 import org.candlepin.controller.Refresher;
 import org.candlepin.model.Consumer;
 import org.candlepin.model.ConsumerType;
+import org.candlepin.model.Entitlement;
 import org.candlepin.model.ExporterMetadata;
 import org.candlepin.model.ExporterMetadataCurator;
-import org.candlepin.model.Entitlement;
 import org.candlepin.model.ImportRecord;
 import org.candlepin.model.ImportRecordCurator;
 import org.candlepin.model.Owner;
@@ -48,16 +47,16 @@ import org.candlepin.test.TestUtil;
 import com.google.inject.Inject;
 import com.google.inject.persist.UnitOfWork;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.xnap.commons.i18n.I18n;
 import org.xnap.commons.i18n.I18nFactory;
 
-import java.sql.SQLException;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -71,7 +70,6 @@ import java.util.Locale;
 public class UndoImportsJobTest extends DatabaseTestFixture {
 
     @Inject protected I18n i18n;
-
     @Inject protected CandlepinPoolManager poolManagerBase;
     @Inject protected ImportRecordCurator importRecordCurator;
     @Inject protected ExporterMetadataCurator exportCuratorBase;
@@ -88,9 +86,7 @@ public class UndoImportsJobTest extends DatabaseTestFixture {
 
     protected UndoImportsJob undoImportsJob;
 
-
-
-    @Before
+    @BeforeEach
     public void setUp() {
         this.i18n = I18nFactory.getI18n(this.getClass(), Locale.US, I18nFactory.FALLBACK);
 
@@ -250,15 +246,11 @@ public class UndoImportsJobTest extends DatabaseTestFixture {
     @Test
     public void handleException() throws JobExecutionException {
         // the real thing we want to handle
-        doThrow(new NullPointerException()).when(this.ownerCurator).lockAndLoadById(anyString());
+        when(ownerCurator.lockAndLoadById(any())).thenThrow(new NullPointerException());
 
-        try {
-            this.undoImportsJob.execute(this.jobContext);
-            fail("Expected exception not thrown");
-        }
-        catch (JobExecutionException ex) {
-            assertFalse(ex.refireImmediately());
-        }
+        JobExecutionException ex = assertThrows(JobExecutionException.class,
+            () -> undoImportsJob.execute(jobContext));
+        assertFalse(ex.refireImmediately());
     }
 
     // If we encounter a runtime job exception, wrapping a SQLException, we should see
@@ -266,15 +258,11 @@ public class UndoImportsJobTest extends DatabaseTestFixture {
     @Test
     public void refireOnWrappedSQLException() throws JobExecutionException {
         RuntimeException e = new RuntimeException("uh oh", new SQLException("not good"));
-        doThrow(e).when(this.ownerCurator).lockAndLoadById(anyString());
+        when(ownerCurator.lockAndLoadById(any())).thenThrow(e);
 
-        try {
-            this.undoImportsJob.execute(this.jobContext);
-            fail("Expected exception not thrown");
-        }
-        catch (JobExecutionException ex) {
-            assertTrue(ex.refireImmediately());
-        }
+        JobExecutionException ex = assertThrows(JobExecutionException.class,
+            () -> undoImportsJob.execute(jobContext));
+        assertTrue(ex.refireImmediately());
     }
 
     // If we encounter a runtime job exception, wrapping a SQLException, we should see
@@ -283,28 +271,18 @@ public class UndoImportsJobTest extends DatabaseTestFixture {
     public void refireOnMultiLayerWrappedSQLException() throws JobExecutionException {
         RuntimeException e = new RuntimeException("uh oh", new SQLException("not good"));
         RuntimeException e2 = new RuntimeException("trouble!", e);
-        doThrow(e2).when(this.ownerCurator).lockAndLoadById(anyString());
-
-        try {
-            this.undoImportsJob.execute(this.jobContext);
-            fail("Expected exception not thrown");
-        }
-        catch (JobExecutionException ex) {
-            assertTrue(ex.refireImmediately());
-        }
+        when(ownerCurator.lockAndLoadById(any())).thenThrow(e2);
+        JobExecutionException ex = assertThrows(JobExecutionException.class,
+            () -> undoImportsJob.execute(jobContext));
+        assertTrue(ex.refireImmediately());
     }
 
     @Test
     public void noRefireOnRegularRuntimeException() throws JobExecutionException {
         RuntimeException e = new RuntimeException("uh oh", new NullPointerException());
-        doThrow(e).when(this.ownerCurator).lockAndLoadById(anyString());
-
-        try {
-            this.undoImportsJob.execute(this.jobContext);
-            fail("Expected exception not thrown");
-        }
-        catch (JobExecutionException ex) {
-            assertFalse(ex.refireImmediately());
-        }
+        when(ownerCurator.lockAndLoadById(any())).thenThrow(e);
+        JobExecutionException ex = assertThrows(JobExecutionException.class,
+            () -> undoImportsJob.execute(jobContext));
+        assertFalse(ex.refireImmediately());
     }
 }
