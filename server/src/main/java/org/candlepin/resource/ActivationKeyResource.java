@@ -177,6 +177,18 @@ public class ActivationKeyResource {
             toUpdate.setDescription(update.getDescription());
         }
 
+        if (update.getUsage() != null) {
+            toUpdate.setUsage(update.getUsage());
+        }
+
+        if (update.getRole() != null) {
+            toUpdate.setRole(update.getRole());
+        }
+
+        if (update.getAddOns() != null) {
+            toUpdate.setAddOns(update.getAddOns());
+        }
+
         if (update.isAutoAttach() != null) {
             toUpdate.setAutoAttach(update.isAutoAttach());
         }
