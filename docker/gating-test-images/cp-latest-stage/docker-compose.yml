@@ -1,0 +1,26 @@
+version: '3'
+services:
+  db:
+    image: docker-registry.engineering.redhat.com/candlepin/cp_postgres:latest
+    environment:
+      POSTGRES_USER: candlepin
+      POSTGRES_INITDB_ARGS: "--auth='ident' --auth='trust'"
+    ports:
+      - "5432:5432"
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 10
+  candlepin:
+    image: docker-registry.engineering.redhat.com/candlepin/cp_latest_stage:latest
+    environment:
+      USING_POSTGRES: "true"
+      DBHOSTNAME: db
+    ports:
+      - "8443:8443"
+    privileged: true
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 10
+        delay: 3s
