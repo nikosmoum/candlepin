@@ -24,6 +24,13 @@ import org.mozilla.javascript.Wrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.script.Invocable;
+import javax.script.ScriptContext;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+
+
 /**
  * JsRunner - Responsible for running the javascript rules methods in all
  * namespaces.
@@ -103,6 +110,25 @@ public class JsRunner {
         finally {
             Context.exit();
         }
+    }
+
+    public <T> T invokeMethodNashorn(String methodName, String contextArgs, String namespace,
+        Logger logger) throws ScriptException, NoSuchMethodException {
+
+        ScriptEngineManager manager = new ScriptEngineManager();
+        ScriptEngine engine = manager.getEngineByName("nashorn");
+        String jsFileName = this.getClass().getClassLoader().getResource("rules/rules.js").toString();
+        jsFileName = jsFileName.substring(jsFileName.lastIndexOf(':') + 1);
+        engine.eval("load(\""+jsFileName+"\")");
+
+        ScriptContext context = engine.getContext();
+        context.setAttribute("json_context", contextArgs, ScriptContext.ENGINE_SCOPE);
+        context.setAttribute("log", logger, ScriptContext.ENGINE_SCOPE);
+
+        Object testNameSpace = engine.eval(namespace);
+        Invocable invocable = (Invocable) engine;
+        Object result = invocable.invokeMethod(testNameSpace, methodName);
+        return (T) result;
     }
 
     @SuppressWarnings("unchecked")

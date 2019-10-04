@@ -61,6 +61,8 @@ import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jdk.nashorn.api.scripting.ScriptObjectMirror;
+
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -72,6 +74,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import javax.script.ScriptException;
 
 /**
  * AutobindRulesTest
@@ -812,7 +816,8 @@ public class AutobindRulesTest {
     }
 
     @Test
-    public void testSysPurposePoolPriorityCompliantRoleNonCompliantAddon() throws NoSuchMethodException {
+    public void testSysPurposePoolPriorityCompliantRoleNonCompliantAddon()
+        throws NoSuchMethodException, ScriptException {
         Product product69 = new Product();
         product69.setId("non-compliant-69");
         Product product82 = new Product();
@@ -849,20 +854,24 @@ public class AutobindRulesTest {
         p3.setId("p3");
         p3.addProvidedProduct(product82);
 
-        jsRules.reinitTo("test_name_space");
-        JsonJsContext args = new JsonJsContext(mapper);
-        args.put("log", log, false);
+        Map<String, Object> args = new HashMap<>();
         args.put("consumer", consumer);
         args.put("compliance", compliance);
 
         args.put("pool", p1);
-        Double p1Priority = jsRules.invokeMethod("get_pool_priority_test", args);
+        String json_context = this.mapper.toJsonString(args);
+        Double p1Priority = jsRules.invokeMethodNashorn("get_pool_priority_test", json_context,
+            "TestNamespace", log);
 
         args.put("pool", p2);
-        Double p2Priority = jsRules.invokeMethod("get_pool_priority_test", args);
+        json_context = this.mapper.toJsonString(args);
+        Double p2Priority = jsRules.invokeMethodNashorn("get_pool_priority_test", json_context,
+            "TestNamespace", log);
 
         args.put("pool", p3);
-        Double p3Priority = jsRules.invokeMethod("get_pool_priority_test", args);
+        json_context = this.mapper.toJsonString(args);
+        Double p3Priority = jsRules.invokeMethodNashorn("get_pool_priority_test", json_context,
+            "TestNamespace", log);
 
         assertTrue("Pool p2 should have a higher priority than pool p1.",
             p2Priority > p1Priority);
