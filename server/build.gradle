@@ -198,6 +198,16 @@ dependencies {
     // Javascript engine
     implementation "org.mozilla:rhino:1.7R3"
 
+    // GraalVM dependencies
+    implementation "org.graalvm.sdk:graal-sdk:19.2.0"
+    runtimeOnly "org.graalvm.truffle:truffle-api:19.2.0"
+    runtimeOnly "org.graalvm.js:js:19.2.0"
+    runtimeOnly "org.graalvm.js:js-scriptengine:19.2.0"
+    runtimeOnly "org.graalvm.compiler:compiler:19.2.0"
+    runtimeOnly "org.graalvm.tools:profiler:19.2.0"
+    runtimeOnly "org.graalvm.tools:chromeinspector:19.2.0"
+    runtimeOnly "com.ibm.icu:icu4j:64.2"
+
     // Keycloak
     compile group: 'org.keycloak', name: 'keycloak-servlet-filter-adapter', version: '6.0.1'
     compile group: 'org.keycloak', name: 'keycloak-adapter-core', version: '6.0.1'

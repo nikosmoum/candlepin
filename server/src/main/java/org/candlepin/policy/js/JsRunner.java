@@ -14,6 +14,9 @@
  */
 package org.candlepin.policy.js;
 
+import org.graalvm.polyglot.HostAccess;
+import org.graalvm.polyglot.Source;
+import org.graalvm.polyglot.Value;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.RhinoException;
@@ -23,6 +26,10 @@ import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.Wrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 
 /**
  * JsRunner - Responsible for running the javascript rules methods in all
@@ -105,9 +112,62 @@ public class JsRunner {
         }
     }
 
+
+    @SuppressWarnings("unchecked")
+    public <T> T invokeMethodGraalVM(String methodName, JsContext contextArgs, Class<T> clazz) {
+        JsonJsContext jsonContextArgs = (JsonJsContext) contextArgs;
+        Logger logger = jsonContextArgs.getLogger();
+        RulesObjectMapper mapper = jsonContextArgs.getRulesObjectMapper();
+        String jsonArgs = mapper.toJsonString(jsonContextArgs.contextArgs);
+
+        try {
+            // Create GraalVM context
+            org.graalvm.polyglot.Context context = org.graalvm.polyglot.Context
+                .newBuilder("js")
+                .allowHostAccess(HostAccess.ALL) // So that JavaScript code can call Java methods (in our
+                                                 // case, the logger, which is passed in un-serialized).
+                .option("inspect", "localhost:8181") // enable Chrome Dev Tools debugger option
+                .option("inspect.Path", "my-debug-path")
+                .option("inspect.Secure", "false")
+                .build();
+
+            // The debugger is accessible through Chrome on this URL: chrome-devtools://devtools/bundled/js_app.html?ws=127.0.0.1:8181/my-debug-path
+
+            // Load & parse the rules file
+            URL rulesfile = this.getClass().getClassLoader().getResource("rules/rules.js");
+            context.eval(Source.newBuilder("js", rulesfile).build());
+
+            // Get all the top-level bindings of the file (methods, namespaces, etc.)
+            Value allBindings = context.getBindings("js");
+
+            // Get the namespace we're calling into
+            Value namespaceValue = allBindings.getMember(namespace).execute();
+
+            // Set the input as attributes
+            allBindings.putMember("json_context", jsonArgs);
+            allBindings.putMember("log", logger);
+
+            // Call the method
+            Value result = namespaceValue.getMember(methodName).execute();
+            if (clazz == null) {
+                return (T) result.asString();
+            }
+            else {
+                return result.as(clazz);
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     @SuppressWarnings("unchecked")
     public <T> T invokeMethod(String method, JsContext context)
         throws NoSuchMethodException, RhinoException {
+        if (true) {
+            return (T) this.invokeMethodGraalVM(method, context, null);
+        }
         context.applyTo(scope);
         return (T) invokeMethod(method);
     }
@@ -135,6 +195,9 @@ public class JsRunner {
 
     public <T extends Object> T runJsFunction(Class<T> clazz, String function,
         JsContext context) {
+        if (true) {
+            return this.invokeMethodGraalVM(function, context, clazz);
+        }
         T returner = null;
         try {
             returner = invokeMethod(function, context);

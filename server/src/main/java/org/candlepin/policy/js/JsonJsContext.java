@@ -15,6 +15,7 @@
 package org.candlepin.policy.js;
 
 import org.mozilla.javascript.Scriptable;
+import org.slf4j.Logger;
 
 /**
  * JsonContext
@@ -47,5 +48,13 @@ public class JsonJsContext extends JsContext {
         else {
             this.put(contextKey, contextVal);
         }
+    }
+
+    RulesObjectMapper getRulesObjectMapper() {
+        return this.rulesObjectMapper;
+    }
+
+    Logger getLogger() {
+        return (Logger) this.nonSerializableContext.get("log");
     }
 }

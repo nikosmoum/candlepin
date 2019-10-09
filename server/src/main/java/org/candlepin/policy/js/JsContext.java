@@ -38,6 +38,10 @@ public abstract class JsContext {
         this.contextArgs.put(contextKey, contextVal);
     }
 
+    public Object get(String contextKey) {
+        return this.contextArgs.get(contextKey);
+    }
+
     /**
      * Apply this context's arguments to the specified {@link Scriptable}.
      *
